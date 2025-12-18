@@ -3,156 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tap Game Telegram</title>
+    <title>Tap Game Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Evita que el usuario pueda seleccionar texto o arrastrar elementos */
-        * {
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: manipulation;
-        }
-
+        * { user-select: none; -webkit-user-select: none; touch-action: none; }
         body {
             background: radial-gradient(circle, #1e1e2f 0%, #0c0c14 100%);
-            color: white;
-            text-align: center;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            overflow: hidden; /* Bloquea el scroll */
+            color: white; text-align: center; font-family: sans-serif;
+            margin: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; height: 100vh; overflow: hidden;
         }
 
-        #score-label {
-            font-size: 1.2rem;
-            color: #aaa;
-            margin-bottom: 5px;
-        }
-
-        #score {
-            font-size: 4rem;
-            font-weight: 900;
-            margin-bottom: 30px;
-            text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
-        }
-
-        #coin-container {
-            position: relative;
-            z-index: 10;
-        }
-
+        #score { font-size: 3.5rem; font-weight: 900; margin-bottom: 10px; color: #ffd700; }
+        
+        /* Contenedor de la Moneda */
         #coin {
-            width: 220px;
-            height: 220px;
+            width: 200px; height: 200px;
             background: linear-gradient(145deg, #ffd700, #ff8c00);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 90px;
-            border: 10px solid #b8860b;
-            cursor: pointer;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,255,255,0.5);
-            transition: transform 0.05s active;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 80px; border: 8px solid #b8860b; cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: transform 0.05s;
+        }
+        #coin:active { transform: scale(0.92); }
+
+        /* Estilos de la Barra de Energía */
+        #energy-container { width: 80%; max-width: 300px; margin-top: 40px; }
+        #energy-text { font-size: 1.2rem; margin-bottom: 8px; font-weight: bold; }
+        #energy-bar-bg {
+            width: 100%; height: 20px; background: #333;
+            border-radius: 10px; overflow: hidden; border: 2px solid #555;
+        }
+        #energy-bar-fill {
+            width: 100%; height: 100%; background: linear-gradient(90deg, #ffeb3b, #f44336);
+            transition: width 0.2s ease;
         }
 
-        /* Efecto visual al presionar */
-        #coin:active {
-            transform: scale(0.92);
-        }
-
-        /* Estilo de los números que flotan al hacer tap */
         .tap-number {
-            position: absolute;
-            color: #ffd700;
-            font-size: 2rem;
-            font-weight: bold;
-            pointer-events: none;
-            z-index: 100;
-            animation: float-up 0.6s ease-out forwards;
+            position: absolute; color: white; font-size: 2rem; font-weight: bold;
+            pointer-events: none; animation: float-up 0.6s ease-out forwards;
         }
-
         @keyframes float-up {
             0% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-120px); }
+            100% { opacity: 0; transform: translateY(-100px); }
         }
     </style>
 </head>
 <body>
 
-    <div id="score-label">BALANCE</div>
     <div id="score">0</div>
 
-    <div id="coin-container">
-        <div id="coin">💰</div>
+    <div id="coin">💰</div>
+
+    <div id="energy-container">
+        <div id="energy-text">⚡ <span id="energy-val">1000</span>/1000</div>
+        <div id="energy-bar-bg">
+            <div id="energy-bar-fill"></div>
+        </div>
     </div>
 
     <script>
-        // 1. Inicialización de Telegram Web App
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Abre la app en pantalla completa
-        tg.ready();
+        tg.expand();
 
+        // Configuración
+        const MAX_ENERGY = 1000;
+        const REGEN_RATE = 1; // Energía por segundo
+
+        // Estado del juego
+        let score = parseInt(localStorage.getItem('tap_score')) || 0;
+        let energy = parseInt(localStorage.getItem('tap_energy')) || MAX_ENERGY;
+        let lastTime = parseInt(localStorage.getItem('last_time')) || Date.now();
+
+        // Referencias DOM
         const scoreDisplay = document.getElementById('score');
+        const energyDisplay = document.getElementById('energy-val');
+        const energyBar = document.getElementById('energy-bar-fill');
         const coinBtn = document.getElementById('coin');
 
-        // 2. Cargar puntuación de LocalStorage
-        let score = parseInt(localStorage.getItem('tap_score')) || 0;
-        scoreDisplay.textContent = score.toLocaleString(); // Formato con comas
+        // Calcular recuperación de energía offline
+        function recoverOffline() {
+            const now = Date.now();
+            const secondsPassed = Math.floor((now - lastTime) / 1000);
+            energy = Math.min(MAX_ENERGY, energy + (secondsPassed * REGEN_RATE));
+            updateUI();
+        }
 
-        // 3. Función para manejar el toque
-        function handleTap(e) {
-            // Evitar comportamiento por defecto (zoom/scroll)
-            if (e.cancelable) e.preventDefault();
-
-            // Incrementar puntos
-            score++;
+        function updateUI() {
             scoreDisplay.textContent = score.toLocaleString();
-
-            // Guardar en el dispositivo
-            localStorage.setItem('tap_score', score);
-
-            // Vibración (Haptic Feedback)
-            if (tg.HapticFeedback) {
-                tg.HapticFeedback.impactOccurred('medium');
-            }
-
-            // Crear el número flotante (+1)
-            // Obtenemos la posición del toque (soporta dedo o mouse)
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            createFloatingNumber(clientX, clientY);
+            energyDisplay.textContent = Math.floor(energy);
+            const energyPercent = (energy / MAX_ENERGY) * 100;
+            energyBar.style.width = energyPercent + '%';
         }
 
-        function createFloatingNumber(x, y) {
-            const num = document.createElement('div');
-            num.className = 'tap-number';
-            num.innerText = '+1';
-            num.style.left = (x - 20) + 'px';
-            num.style.top = (y - 40) + 'px';
-            
-            document.body.appendChild(num);
+        function handleTap(e) {
+            if (energy >= 1) {
+                // Lógica del Tap
+                score++;
+                energy--;
+                
+                // Efectos
+                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+                
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                createFloatingNumber(clientX, clientY);
 
-            // Eliminar el elemento después de la animación
-            setTimeout(() => {
-                num.remove();
-            }, 600);
-        }
-
-        // 4. Asignar eventos (PointerDown es el más fiable actualmente)
-        coinBtn.addEventListener('pointerdown', handleTap);
-
-        // Deshabilitar el menú contextual (clic derecho) para que no moleste en móviles
-        window.oncontextmenu = function(event) {
-            event.preventDefault();
-            event.stopPropagation();
-            return false;
-        };
-    </script>
-</body>
-</html>
+                saveData();
+                updateUI();
+            } else {
+                // No hay energía
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+                coinBtn.style.filter
