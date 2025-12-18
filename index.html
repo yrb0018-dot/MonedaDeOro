@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tap Master Bot</title>
+    <style>
+        body {
+            background: radial-gradient(circle, #1a1a2e 0%, #0f0f1b 100%);
+            color: white;
+            text-align: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            overflow: hidden; /* Evita el scroll en móviles */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        #score-container { font-size: 3rem; font-weight: bold; margin-bottom: 20px; }
+        
+        #coin {
+            width: 250px;
+            height: 250px;
+            background: linear-gradient(145deg, #ffd700, #ff8c00);
+            border-radius: 50%;
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 100px;
+            user-select: none;
+            transition: transform 0.05s;
+            border: 10px solid #b8860b;
+        }
+
+        #coin:active { transform: scale(0.95); }
+
+        .floating-text {
+            position: absolute;
+            color: #ffd700;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 0.8s ease-out forwards;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-100px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="score-container">0</div>
+    <div id="coin">💰</div>
+
+    <script>
+        let score = 0;
+        const scoreDisplay = document.getElementById('score-container');
+        const coin = document.getElementById('coin');
+
+        coin.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Evita zoom en móviles
+            handleTap(e.touches[0].clientX, e.touches[0].clientY);
+        });
+
+        coin.addEventListener('mousedown', (e) => {
+            handleTap(e.clientX, e.clientY);
+        });
+
+        function handleTap(x, y) {
+            score++;
+            scoreDisplay.innerText = score;
+            createFloatingText(x, y);
+        }
+
+        function createFloatingText(x, y) {
+            const el = document.createElement('div');
+            el.className = 'floating-text';
+            el.innerText = '+1';
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 800);
+        }
+    </script>
+</body>
+</html>
