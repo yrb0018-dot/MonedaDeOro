@@ -87,6 +87,10 @@
             document.body.appendChild(el);
             setTimeout(() => el.remove(), 800);
         }
-    </script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.expand(); // Esto hace que el juego ocupe toda la pantalla del móvil
+</script>
 </body>
 </html>
