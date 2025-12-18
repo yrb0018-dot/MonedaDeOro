@@ -3,115 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tap Game Pro</title>
+    <title>Tap Game Debug</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { user-select: none; -webkit-user-select: none; touch-action: none; }
         body {
-            background: radial-gradient(circle, #1e1e2f 0%, #0c0c14 100%);
-            color: white; text-align: center; font-family: sans-serif;
-            margin: 0; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; height: 100vh; overflow: hidden;
+            background: #0c0c14; color: white; text-align: center;
+            font-family: sans-serif; margin: 0; padding: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100vh; overflow: hidden;
         }
-
-        #score { font-size: 3.5rem; font-weight: 900; margin-bottom: 10px; color: #ffd700; }
-        
-        /* Contenedor de la Moneda */
+        #score { font-size: 3rem; font-weight: bold; margin: 10px; color: gold; }
         #coin {
-            width: 200px; height: 200px;
-            background: linear-gradient(145deg, #ffd700, #ff8c00);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 80px; border: 8px solid #b8860b; cursor: pointer;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            transition: transform 0.05s;
+            width: 180px; height: 180px; background: orange;
+            border-radius: 50%; border: 8px solid white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 60px; cursor: pointer; position: relative;
         }
-        #coin:active { transform: scale(0.92); }
-
-        /* Estilos de la Barra de Energía */
-        #energy-container { width: 80%; max-width: 300px; margin-top: 40px; }
-        #energy-text { font-size: 1.2rem; margin-bottom: 8px; font-weight: bold; }
-        #energy-bar-bg {
-            width: 100%; height: 20px; background: #333;
-            border-radius: 10px; overflow: hidden; border: 2px solid #555;
+        #energy-container { width: 80%; margin-top: 20px; }
+        #energy-bar {
+            width: 100%; height: 15px; background: #333;
+            border-radius: 10px; border: 1px solid #555;
         }
-        #energy-bar-fill {
-            width: 100%; height: 100%; background: linear-gradient(90deg, #ffeb3b, #f44336);
-            transition: width 0.2s ease;
+        #energy-fill {
+            width: 100%; height: 100%; background: #4caf50;
+            border-radius: 10px; transition: width 0.1s;
         }
-
-        .tap-number {
-            position: absolute; color: white; font-size: 2rem; font-weight: bold;
-            pointer-events: none; animation: float-up 0.6s ease-out forwards;
-        }
-        @keyframes float-up {
-            0% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-100px); }
+        /* Consola de errores visible para saber qué pasa */
+        #debug {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: rgba(0,0,0,0.8); color: lime; font-size: 10px;
+            max-height: 60px; overflow: scroll; pointer-events: none;
         }
     </style>
 </head>
 <body>
 
     <div id="score">0</div>
-
     <div id="coin">💰</div>
 
     <div id="energy-container">
-        <div id="energy-text">⚡ <span id="energy-val">1000</span>/1000</div>
-        <div id="energy-bar-bg">
-            <div id="energy-bar-fill"></div>
-        </div>
+        <div id="energy-info">Energía: <span id="energy-val">1000</span></div>
+        <div id="energy-bar"><div id="energy-fill"></div></div>
     </div>
 
+    <div id="debug">Log: Iniciando...</div>
+
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-
-        // Configuración
-        const MAX_ENERGY = 1000;
-        const REGEN_RATE = 1; // Energía por segundo
-
-        // Estado del juego
-        let score = parseInt(localStorage.getItem('tap_score')) || 0;
-        let energy = parseInt(localStorage.getItem('tap_energy')) || MAX_ENERGY;
-        let lastTime = parseInt(localStorage.getItem('last_time')) || Date.now();
-
-        // Referencias DOM
-        const scoreDisplay = document.getElementById('score');
-        const energyDisplay = document.getElementById('energy-val');
-        const energyBar = document.getElementById('energy-bar-fill');
-        const coinBtn = document.getElementById('coin');
-
-        // Calcular recuperación de energía offline
-        function recoverOffline() {
-            const now = Date.now();
-            const secondsPassed = Math.floor((now - lastTime) / 1000);
-            energy = Math.min(MAX_ENERGY, energy + (secondsPassed * REGEN_RATE));
-            updateUI();
+        // Log para ver errores en el celular
+        function log(msg) {
+            const d = document.getElementById('debug');
+            d.innerText = msg;
         }
 
-        function updateUI() {
-            scoreDisplay.textContent = score.toLocaleString();
-            energyDisplay.textContent = Math.floor(energy);
-            const energyPercent = (energy / MAX_ENERGY) * 100;
-            energyBar.style.width = energyPercent + '%';
+        try {
+            const tg = window.Telegram.WebApp;
+            tg.expand();
+
+            let score = parseInt(localStorage.getItem('score')) || 0;
+            let energy = parseInt(localStorage.getItem('energy')) || 1000;
+            const maxEnergy = 1000;
+
+            const scoreEl = document.getElementById('score');
+            const energyEl = document.getElementById('energy-val');
+            const fillEl = document.getElementById('energy-fill');
+            const coin = document.getElementById('coin');
+
+            function updateDisplay() {
+                scoreEl.innerText = score;
+                energyEl.innerText = Math.floor(energy);
+                fillEl.style.width = (energy / maxEnergy * 100) + '%';
+            }
+
+            function handlePress(e) {
+                log("Click detectado!");
+                if (energy >= 1) {
+                    score++;
+                    energy--;
+                    localStorage.setItem('score', score);
+                    localStorage.setItem('energy', energy);
+                    
+                    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+                    updateDisplay();
+                } else {
+                    log("Sin energía");
+                }
+            }
+
+            // USAMOS AMBOS EVENTOS PARA ASEGURARNOS
+            // 'touchstart' para móviles, 'mousedown' para PC
+            coin.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handlePress();
+            }, {passive: false});
+
+            coin.addEventListener('mousedown', (e) => {
+                handlePress();
+            });
+
+            // Recuperar energía cada segundo
+            setInterval(() => {
+                if (energy < maxEnergy) {
+                    energy = Math.min(maxEnergy, energy + 1);
+                    updateDisplay();
+                }
+            }, 1000);
+
+            updateDisplay();
+            log("Listo. ¡Toca la moneda!");
+
+        } catch (e) {
+            log("Error script: " + e.message);
         }
-
-        function handleTap(e) {
-            if (energy >= 1) {
-                // Lógica del Tap
-                score++;
-                energy--;
-                
-                // Efectos
-                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-                
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                createFloatingNumber(clientX, clientY);
-
-                saveData();
-                updateUI();
-            } else {
-                // No hay energía
-                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-                coinBtn.style.filter
+    </script>
+</body>
+</html>
