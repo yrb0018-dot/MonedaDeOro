@@ -3,90 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tap Master Bot</title>
+    <title>Tap Game Telegram</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* Evita que el usuario pueda seleccionar texto o arrastrar elementos */
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
         body {
-            background: radial-gradient(circle, #1a1a2e 0%, #0f0f1b 100%);
+            background: radial-gradient(circle, #1e1e2f 0%, #0c0c14 100%);
             color: white;
             text-align: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
-            overflow: hidden; /* Evita el scroll en móviles */
+            padding: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
+            overflow: hidden; /* Bloquea el scroll */
         }
 
-        #score-container { font-size: 3rem; font-weight: bold; margin-bottom: 20px; }
-        
+        #score-label {
+            font-size: 1.2rem;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+
+        #score {
+            font-size: 4rem;
+            font-weight: 900;
+            margin-bottom: 30px;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        #coin-container {
+            position: relative;
+            z-index: 10;
+        }
+
         #coin {
-            width: 250px;
-            height: 250px;
+            width: 220px;
+            height: 220px;
             background: linear-gradient(145deg, #ffd700, #ff8c00);
             border-radius: 50%;
-            box-shadow: 0 0 50px rgba(255, 215, 0, 0.4);
-            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 100px;
-            user-select: none;
-            transition: transform 0.05s;
+            font-size: 90px;
             border: 10px solid #b8860b;
+            cursor: pointer;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,255,255,0.5);
+            transition: transform 0.05s active;
         }
 
-        #coin:active { transform: scale(0.95); }
+        /* Efecto visual al presionar */
+        #coin:active {
+            transform: scale(0.92);
+        }
 
-        .floating-text {
+        /* Estilo de los números que flotan al hacer tap */
+        .tap-number {
             position: absolute;
             color: #ffd700;
+            font-size: 2rem;
             font-weight: bold;
             pointer-events: none;
-            animation: floatUp 0.8s ease-out forwards;
+            z-index: 100;
+            animation: float-up 0.6s ease-out forwards;
         }
 
-        @keyframes floatUp {
+        @keyframes float-up {
             0% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-100px); }
+            100% { opacity: 0; transform: translateY(-120px); }
         }
     </style>
 </head>
 <body>
 
-    <div id="score-container">0</div>
-    <div id="coin">💰</div>
+    <div id="score-label">BALANCE</div>
+    <div id="score">0</div>
+
+    <div id="coin-container">
+        <div id="coin">💰</div>
+    </div>
 
     <script>
-        let score = 0;
-        const scoreDisplay = document.getElementById('score-container');
-        const coin = document.getElementById('coin');
+        // 1. Inicialización de Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Abre la app en pantalla completa
+        tg.ready();
 
-        coin.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Evita zoom en móviles
-            handleTap(e.touches[0].clientX, e.touches[0].clientY);
-        });
+        const scoreDisplay = document.getElementById('score');
+        const coinBtn = document.getElementById('coin');
 
-        coin.addEventListener('mousedown', (e) => {
-            handleTap(e.clientX, e.clientY);
-        });
+        // 2. Cargar puntuación de LocalStorage
+        let score = parseInt(localStorage.getItem('tap_score')) || 0;
+        scoreDisplay.textContent = score.toLocaleString(); // Formato con comas
 
-        function handleTap(x, y) {
+        // 3. Función para manejar el toque
+        function handleTap(e) {
+            // Evitar comportamiento por defecto (zoom/scroll)
+            if (e.cancelable) e.preventDefault();
+
+            // Incrementar puntos
             score++;
-            scoreDisplay.innerText = score;
-            createFloatingText(x, y);
+            scoreDisplay.textContent = score.toLocaleString();
+
+            // Guardar en el dispositivo
+            localStorage.setItem('tap_score', score);
+
+            // Vibración (Haptic Feedback)
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('medium');
+            }
+
+            // Crear el número flotante (+1)
+            // Obtenemos la posición del toque (soporta dedo o mouse)
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            createFloatingNumber(clientX, clientY);
         }
 
-        function createFloatingText(x, y) {
-            const el = document.createElement('div');
-            el.className = 'floating-text';
-            el.innerText = '+1';
-            el.style.left = `${x}px`;
-            el.style.top = `${y}px`;
-            document.body.appendChild(el);
-            setTimeout(() => el.remove(), 800);
+        function createFloatingNumber(x, y) {
+            const num = document.createElement('div');
+            num.className = 'tap-number';
+            num.innerText = '+1';
+            num.style.left = (x - 20) + 'px';
+            num.style.top = (y - 40) + 'px';
+            
+            document.body.appendChild(num);
+
+            // Eliminar el elemento después de la animación
+            setTimeout(() => {
+                num.remove();
+            }, 600);
         }
+
+        // 4. Asignar eventos (PointerDown es el más fiable actualmente)
+        coinBtn.addEventListener('pointerdown', handleTap);
+
+        // Deshabilitar el menú contextual (clic derecho) para que no moleste en móviles
+        window.oncontextmenu = function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            return false;
+        };
     </script>
 </body>
 </html>
