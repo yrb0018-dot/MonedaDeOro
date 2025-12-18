@@ -88,57 +88,5 @@
             setTimeout(() => el.remove(), 800);
         }
     </script>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script>
-    // 1. Configuración de Telegram
-    const tg = window.Telegram.WebApp;
-    tg.expand(); // Expandir la app a pantalla completa
-
-    // 2. Cargar puntos guardados al iniciar
-    // Si no hay puntos guardados, empezamos en 0
-    let score = parseInt(localStorage.getItem('userScore')) || 0;
-    
-    const scoreDisplay = document.getElementById('score-container');
-    const coin = document.getElementById('coin');
-
-    // Mostrar el puntaje cargado inmediatamente
-    scoreDisplay.innerText = score;
-
-    // 3. Lógica del Tap
-    coin.addEventListener('touchstart', (e) => {
-        e.preventDefault(); 
-        handleTap(e.touches[0].clientX, e.touches[0].clientY);
-    });
-
-    coin.addEventListener('mousedown', (e) => {
-        handleTap(e.clientX, e.clientY);
-    });
-
-    function handleTap(x, y) {
-        score++;
-        scoreDisplay.innerText = score;
-        
-        // 4. GUARDAR EN LOCALSTORAGE
-        // Guardamos el nuevo puntaje cada vez que el usuario hace clic
-        localStorage.setItem('userScore', score);
-
-        createFloatingText(x, y);
-        
-        // Vibración ligera para dar feedback (Haptic Feedback)
-        if (tg.HapticFeedback) {
-            tg.HapticFeedback.impactOccurred('light');
-        }
-    }
-
-    function createFloatingText(x, y) {
-        const el = document.createElement('div');
-        el.className = 'floating-text';
-        el.innerText = '+1';
-        el.style.left = `${x}px`;
-        el.style.top = `${y}px`;
-        document.body.appendChild(el);
-        setTimeout(() => el.remove(), 800);
-    }
-</script>
 </body>
 </html>
