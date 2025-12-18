@@ -3,141 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tap Master Bot</title>
+    <title>Tap Game</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
-            background: radial-gradient(circle, #1a1a2e 0%, #0f0f1b 100%);
+            background: #0f0f1b;
             color: white;
             text-align: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: sans-serif;
             margin: 0;
-            overflow: hidden; /* Evita el scroll en móviles */
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
-        }
-
-        #score-container { font-size: 3rem; font-weight: bold; margin-bottom: 20px; }
-        
-        #coin {
-            width: 250px;
-            height: 250px;
-            background: linear-gradient(145deg, #ffd700, #ff8c00);
-            border-radius: 50%;
-            box-shadow: 0 0 50px rgba(255, 215, 0, 0.4);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 100px;
             user-select: none;
-            transition: transform 0.05s;
-            border: 10px solid #b8860b;
+            -webkit-user-select: none;
         }
-
+        #score { font-size: 3rem; margin-bottom: 20px; }
+        #coin {
+            width: 200px; height: 200px;
+            background: gold;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 80px;
+            border: 8px solid #b8860b;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
         #coin:active { transform: scale(0.95); }
-
-        .floating-text {
-            position: absolute;
-            color: #ffd700;
-            font-weight: bold;
-            pointer-events: none;
-            animation: floatUp 0.8s ease-out forwards;
-        }
-
-        @keyframes floatUp {
-            0% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-100px); }
-        }
     </style>
 </head>
 <body>
 
-    <div id="score-container">0</div>
+    <div id="score">0</div>
     <div id="coin">💰</div>
 
     <script>
-        let score = 0;
-        const scoreDisplay = document.getElementById('score-container');
-        const coin = document.getElementById('coin');
+        // Inicializar Telegram
+        const tg = window.Telegram.WebApp;
+        tg.expand();
 
-        coin.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Evita zoom en móviles
-            handleTap(e.touches[0].clientX, e.touches[0].clientY);
-        });
+        // Cargar datos
+        let score = parseInt(localStorage.getItem('userScore')) || 0;
+        const scoreDisplay = document.getElementById('score');
+        scoreDisplay.innerText = score;
 
-        coin.addEventListener('mousedown', (e) => {
-            handleTap(e.clientX, e.clientY);
-        });
-
-        function handleTap(x, y) {
+        function doTap(e) {
             score++;
             scoreDisplay.innerText = score;
-            createFloatingText(x, y);
+            localStorage.setItem('userScore', score);
+            
+            // Vibración si está disponible
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('medium');
+            }
         }
 
-        function createFloatingText(x, y) {
-            const el = document.createElement('div');
-            el.className = 'floating-text';
-            el.innerText = '+1';
-            el.style.left = `${x}px`;
-            el.style.top = `${y}px`;
-            document.body.appendChild(el);
-            setTimeout(() => el.remove(), 800);
-        }
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script>
-    // 1. Configuración de Telegram
-    const tg = window.Telegram.WebApp;
-    tg.expand(); // Expandir la app a pantalla completa
-
-    // 2. Cargar puntos guardados al iniciar
-    // Si no hay puntos guardados, empezamos en 0
-    let score = parseInt(localStorage.getItem('userScore')) || 0;
-    
-    const scoreDisplay = document.getElementById('score-container');
-    const coin = document.getElementById('coin');
-
-    // Mostrar el puntaje cargado inmediatamente
-    scoreDisplay.innerText = score;
-
-    // 3. Lógica del Tap
-    coin.addEventListener('touchstart', (e) => {
-        e.preventDefault(); 
-        handleTap(e.touches[0].clientX, e.touches[0].clientY);
-    });
-
-    coin.addEventListener('mousedown', (e) => {
-        handleTap(e.clientX, e.clientY);
-    });
-
-    function handleTap(x, y) {
-        score++;
-        scoreDisplay.innerText = score;
-        
-        // 4. GUARDAR EN LOCALSTORAGE
-        // Guardamos el nuevo puntaje cada vez que el usuario hace clic
-        localStorage.setItem('userScore', score);
-
-        createFloatingText(x, y);
-        
-        // Vibración ligera para dar feedback (Haptic Feedback)
-        if (tg.HapticFeedback) {
-            tg.HapticFeedback.impactOccurred('light');
-        }
-    }
-
-    function createFloatingText(x, y) {
-        const el = document.createElement('div');
-        el.className = 'floating-text';
-        el.innerText = '+1';
-        el.style.left = `${x}px`;
-        el.style.top = `${y}px`;
-        document.body.appendChild(el);
-        setTimeout(() => el.remove(), 800);
-    }
-</script>
+        // Eventos para PC y Móvil
+        const coinBtn = document.getElementById('coin');
+        coinBtn.addEventListener('pointerdown', doTap);
+    </script>
 </body>
 </html>
