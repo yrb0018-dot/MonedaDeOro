@@ -3,116 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tap Game Final</title>
+    <title>Tap Game con Tienda</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { user-select: none; -webkit-user-select: none; touch-action: none; }
         body {
             background: #0c0c14; color: white; text-align: center;
-            font-family: sans-serif; margin: 0; padding: 0;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            height: 100vh; overflow: hidden;
+            font-family: 'Arial', sans-serif; margin: 0; padding: 0;
+            display: flex; flex-direction: column; align-items: center; height: 100vh;
         }
-        #score { font-size: 4rem; font-weight: bold; margin: 10px; color: #ffd700; display: block !important; }
+
+        /* Cabecera */
+        #score-container { margin-top: 50px; }
+        #score { font-size: 3.5rem; font-weight: bold; color: #ffd700; }
+        #tap-power { font-size: 1rem; color: #aaa; }
+
+        /* Moneda */
         #coin {
-            width: 200px; height: 200px; background: orange;
+            width: 180px; height: 180px; background: orange;
             border-radius: 50%; border: 8px solid white;
             display: flex; align-items: center; justify-content: center;
-            font-size: 80px; cursor: pointer; position: relative;
-            box-shadow: 0 0 20px rgba(255,165,0,0.5);
+            font-size: 70px; margin: 30px 0; cursor: pointer;
+            box-shadow: 0 0 20px rgba(255,165,0,0.4);
+            transition: transform 0.05s;
         }
-        #coin:active { transform: scale(0.95); }
-        #energy-container { width: 80%; margin-top: 30px; }
+        #coin:active { transform: scale(0.92); }
+
+        /* Energía */
+        #energy-container { width: 80%; margin-bottom: 30px; }
         #energy-bar {
-            width: 100%; height: 20px; background: #333;
-            border-radius: 10px; border: 1px solid #555; overflow: hidden;
+            width: 100%; height: 12px; background: #333;
+            border-radius: 10px; overflow: hidden;
         }
-        #energy-fill {
-            width: 100%; height: 100%; background: #4caf50;
-            transition: width 0.1s;
+        #energy-fill { width: 100%; height: 100%; background: #4caf50; }
+
+        /* TIENDA */
+        #shop {
+            width: 90%; background: #1a1a2e; border-radius: 15px;
+            padding: 15px; box-sizing: border-box; border: 1px solid #333;
         }
-        #debug { position: fixed; bottom: 0; background: rgba(0,0,0,0.5); color: #0f0; width: 100%; font-size: 12px; }
+        .upgrade-btn {
+            background: #2e2e4e; border: none; color: white;
+            width: 100%; padding: 12px; border-radius: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 1rem; cursor: pointer;
+        }
+        .upgrade-btn:disabled { opacity: 0.5; background: #111; }
+        .upgrade-btn b { color: #ffd700; }
+
     </style>
 </head>
 <body>
 
-    <div id="score">0</div>
+    <div id="score-container">
+        <div id="score">0</div>
+        <div id="tap-power">Por toque: +<span id="tap-val-ui">1</span></div>
+    </div>
+
     <div id="coin">💰</div>
 
     <div id="energy-container">
-        <div>⚡ Energía: <span id="energy-val">1000</span></div>
+        <div>⚡ <span id="energy-val">1000</span> / 1000</div>
         <div id="energy-bar"><div id="energy-fill"></div></div>
     </div>
 
-    <div id="debug">Iniciando...</div>
+    <div id="shop">
+        <button id="upgrade-tap" class="upgrade-btn">
+            <span>🚀 Multitap (Nivel <span id="tap-level">1</span>)</span>
+            <b>💰 <span id="upgrade-cost">100</span></b>
+        </button>
+    </div>
 
     <script>
-        const logEl = document.getElementById('debug');
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // VARIABLES DE ESTADO (Cargar o iniciar)
+        let score = parseInt(localStorage.getItem('score')) || 0;
+        let energy = parseInt(localStorage.getItem('energy')) || 1000;
+        let tapLevel = parseInt(localStorage.getItem('tapLevel')) || 1;
         
-        try {
-            const tg = window.Telegram.WebApp;
-            tg.expand();
+        const maxEnergy = 1000;
+        
+        // Elementos UI
+        const scoreEl = document.getElementById('score');
+        const energyEl = document.getElementById('energy-val');
+        const fillEl = document.getElementById('energy-fill');
+        const tapValUI = document.getElementById('tap-val-ui');
+        const tapLevelUI = document.getElementById('tap-level');
+        const upgradeCostUI = document.getElementById('upgrade-cost');
+        const upgradeBtn = document.getElementById('upgrade-tap');
 
-            // Variables de estado
-            let score = parseInt(localStorage.getItem('score')) || 0;
-            let energy = parseInt(localStorage.getItem('energy')) || 1000;
-            const maxEnergy = 1000;
-
-            // Elementos
-            const scoreEl = document.getElementById('score');
-            const energyEl = document.getElementById('energy-val');
-            const fillEl = document.getElementById('energy-fill');
-            const coin = document.getElementById('coin');
-
-            // Función para actualizar la pantalla (FORZADA)
-            function updateUI() {
-                scoreEl.textContent = score.toString();
-                energyEl.textContent = Math.floor(energy).toString();
-                fillEl.style.width = (energy / maxEnergy * 100) + '%';
-            }
-
-            // Manejador de toques
-            function doTap(e) {
-                if (e) e.preventDefault();
-                
-                if (energy >= 1) {
-                    score = score + 1;
-                    energy = energy - 1;
-                    
-                    // Actualizar visualmente ANTES de guardar
-                    updateUI();
-                    
-                    // Guardar datos
-                    localStorage.setItem('score', score);
-                    localStorage.setItem('energy', energy);
-                    
-                    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-                    logEl.innerText = "Tap ok! Puntos: " + score;
-                } else {
-                    logEl.innerText = "Sin energía";
-                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-                }
-            }
-
-            // Registrar eventos
-            coin.addEventListener('touchstart', doTap, {passive: false});
-            coin.addEventListener('mousedown', doTap);
-
-            // Regeneración de energía lenta
-            setInterval(() => {
-                if (energy < maxEnergy) {
-                    energy++;
-                    updateUI();
-                }
-            }, 1500);
-
-            // Primera carga
-            updateUI();
-            logEl.innerText = "Todo cargado. Toca la moneda.";
-
-        } catch (err) {
-            logEl.innerText = "Error: " + err.message;
+        function getUpgradeCost() {
+            return Math.floor(100 * Math.pow(1.5, tapLevel - 1));
         }
+
+        function updateUI() {
+            scoreEl.textContent = score.toLocaleString();
+            energyEl.textContent = Math.floor(energy);
+            fillEl.style.width = (energy / maxEnergy * 100) + '%';
+            
+            tapValUI.textContent = tapLevel;
+            tapLevelUI.textContent = tapLevel;
+            
+            const cost = getUpgradeCost();
+            upgradeCostUI.textContent = cost;
+            
+            // Desactivar botón si no hay dinero
+            upgradeBtn.disabled = (score < cost);
+        }
+
+        // LÓGICA DEL CLIC
+        function doTap(e) {
+            if (e) e.preventDefault();
+            if (energy >= tapLevel) {
+                score += tapLevel;
+                energy -= tapLevel;
+                save();
+                updateUI();
+                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+            }
+        }
+
+        // COMPRAR MEJORA
+        upgradeBtn.addEventListener('click', () => {
+            const cost = getUpgradeCost();
+            if (score >= cost) {
+                score -= cost;
+                tapLevel++;
+                save();
+                updateUI();
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            }
+        });
+
+        function save() {
+            localStorage.setItem('score', score);
+            localStorage.setItem('energy', energy);
+            localStorage.setItem('tapLevel', tapLevel);
+        }
+
+        // Eventos de la moneda
+        const coin = document.getElementById('coin');
+        coin.addEventListener('touchstart', doTap);
+        coin.addEventListener('mousedown', doTap);
+
+        // Regeneración de energía
+        setInterval(() => {
+            if (energy < maxEnergy) {
+                energy = Math.min(maxEnergy, energy + 2);
+                updateUI();
+            }
+        }, 1000);
+
+        updateUI();
     </script>
 </body>
 </html>
