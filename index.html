@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tap Game Debug</title>
+    <title>Tap Game Final</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { user-select: none; -webkit-user-select: none; touch-action: none; }
@@ -13,28 +13,25 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             height: 100vh; overflow: hidden;
         }
-        #score { font-size: 3rem; font-weight: bold; margin: 10px; color: gold; }
+        #score { font-size: 4rem; font-weight: bold; margin: 10px; color: #ffd700; display: block !important; }
         #coin {
-            width: 180px; height: 180px; background: orange;
+            width: 200px; height: 200px; background: orange;
             border-radius: 50%; border: 8px solid white;
             display: flex; align-items: center; justify-content: center;
-            font-size: 60px; cursor: pointer; position: relative;
+            font-size: 80px; cursor: pointer; position: relative;
+            box-shadow: 0 0 20px rgba(255,165,0,0.5);
         }
-        #energy-container { width: 80%; margin-top: 20px; }
+        #coin:active { transform: scale(0.95); }
+        #energy-container { width: 80%; margin-top: 30px; }
         #energy-bar {
-            width: 100%; height: 15px; background: #333;
-            border-radius: 10px; border: 1px solid #555;
+            width: 100%; height: 20px; background: #333;
+            border-radius: 10px; border: 1px solid #555; overflow: hidden;
         }
         #energy-fill {
             width: 100%; height: 100%; background: #4caf50;
-            border-radius: 10px; transition: width 0.1s;
+            transition: width 0.1s;
         }
-        /* Consola de errores visible para saber qué pasa */
-        #debug {
-            position: fixed; bottom: 0; left: 0; width: 100%;
-            background: rgba(0,0,0,0.8); color: lime; font-size: 10px;
-            max-height: 60px; overflow: scroll; pointer-events: none;
-        }
+        #debug { position: fixed; bottom: 0; background: rgba(0,0,0,0.5); color: #0f0; width: 100%; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -43,77 +40,78 @@
     <div id="coin">💰</div>
 
     <div id="energy-container">
-        <div id="energy-info">Energía: <span id="energy-val">1000</span></div>
+        <div>⚡ Energía: <span id="energy-val">1000</span></div>
         <div id="energy-bar"><div id="energy-fill"></div></div>
     </div>
 
-    <div id="debug">Log: Iniciando...</div>
+    <div id="debug">Iniciando...</div>
 
     <script>
-        // Log para ver errores en el celular
-        function log(msg) {
-            const d = document.getElementById('debug');
-            d.innerText = msg;
-        }
-
+        const logEl = document.getElementById('debug');
+        
         try {
             const tg = window.Telegram.WebApp;
             tg.expand();
 
+            // Variables de estado
             let score = parseInt(localStorage.getItem('score')) || 0;
             let energy = parseInt(localStorage.getItem('energy')) || 1000;
             const maxEnergy = 1000;
 
+            // Elementos
             const scoreEl = document.getElementById('score');
             const energyEl = document.getElementById('energy-val');
             const fillEl = document.getElementById('energy-fill');
             const coin = document.getElementById('coin');
 
-            function updateDisplay() {
-                scoreEl.innerText = score;
-                energyEl.innerText = Math.floor(energy);
+            // Función para actualizar la pantalla (FORZADA)
+            function updateUI() {
+                scoreEl.textContent = score.toString();
+                energyEl.textContent = Math.floor(energy).toString();
                 fillEl.style.width = (energy / maxEnergy * 100) + '%';
             }
 
-            function handlePress(e) {
-                log("Click detectado!");
+            // Manejador de toques
+            function doTap(e) {
+                if (e) e.preventDefault();
+                
                 if (energy >= 1) {
-                    score++;
-                    energy--;
+                    score = score + 1;
+                    energy = energy - 1;
+                    
+                    // Actualizar visualmente ANTES de guardar
+                    updateUI();
+                    
+                    // Guardar datos
                     localStorage.setItem('score', score);
                     localStorage.setItem('energy', energy);
                     
                     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-                    updateDisplay();
+                    logEl.innerText = "Tap ok! Puntos: " + score;
                 } else {
-                    log("Sin energía");
+                    logEl.innerText = "Sin energía";
+                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
                 }
             }
 
-            // USAMOS AMBOS EVENTOS PARA ASEGURARNOS
-            // 'touchstart' para móviles, 'mousedown' para PC
-            coin.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                handlePress();
-            }, {passive: false});
+            // Registrar eventos
+            coin.addEventListener('touchstart', doTap, {passive: false});
+            coin.addEventListener('mousedown', doTap);
 
-            coin.addEventListener('mousedown', (e) => {
-                handlePress();
-            });
-
-            // Recuperar energía cada segundo
+            // Regeneración de energía lenta
             setInterval(() => {
                 if (energy < maxEnergy) {
-                    energy = Math.min(maxEnergy, energy + 1);
-                    updateDisplay();
+                    energy++;
+                    updateUI();
                 }
-            }, 1000);
+            }, 1500);
 
-            updateDisplay();
-            log("Listo. ¡Toca la moneda!");
+            // Primera carga
+            updateUI();
+            logEl.innerText = "Todo cargado. Toca la moneda.";
 
-        } catch (e) {
-            log("Error script: " + e.message);
+        } catch (err) {
+            logEl.innerText = "Error: " + err.message;
         }
     </script>
 </body>
